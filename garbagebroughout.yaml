@@ -1,0 +1,185 @@
+blueprint:
+  name: Garbage Out?
+  description: Was a specific garbage brought out to the street already?
+  domain: automation
+  input:
+    reminder_time:
+      name: Pickup countdown
+      description: Countdown entity until pickup for relevant garbage
+      selector:
+        entity:
+          domain: input_boolean
+    reminder_ahead:
+      name: Remind Ahead
+      description: Days pre-pickup that notification should be sent; 1 = tomorrow
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 14.0
+          unit_of_measurement: days
+          step: 1.0
+          mode: slider
+    notify_device:
+      name: Notification
+      description: Device needs to run the official Home Assistant app to receive
+        notifications
+      selector:
+        device:
+          integration: mobile_app
+    input_boolean:
+      name: Dedicated input_boolean
+      description: Create and set here a input_boolean to handle history and state
+        of the automation
+      selector:
+        entity:
+          domain: input_boolean
+    notification_title:
+      name: 'Notification title (Optional)'
+      description: 'Default: Bring out the garbage!'
+      default: Bring out the garbage!
+    notification_message:
+      name: 'Notification message (Optional)'
+      description: 'Default: It is time to bring out the garbage.'
+      default: It is time to bring out the garbage.
+    notification_action_brought_out:
+      name: 'Notification action: Done (Optional)'
+      description: 'Default: Done'
+      default: Done
+    notification_action_later:
+      name: 'Notification action: Ask later (Optional)'
+      description: 'Default: Ask later'
+      default: Ask later
+    notification_action_skip:
+      name: 'Notification action: Skip (Optional)'
+      description: 'Default: Skip'
+      default: Skip
+    ask_later_wait_time:
+      name: Wait time before next reminder
+      description: Minutes before notify again after a Ask later action.
+      default: 1.0
+      selector:
+        number:
+          min: 1.0
+          max: 60.0
+          unit_of_measurement: minutes
+          step: 1.0
+          mode: slider
+    logbook_message_remind:
+      name: Logbook message for remind (Optional)
+      description: 'Default: Reminder sent'
+      default: Reminder sent
+    logbook_message_brought_out:
+      name: Logbook message for action Brought Out (Optional)
+      description: 'Default: Garbage was brought out'
+      default: Garbage was brought out
+    logbook_message_later:
+      name: Logbook message for action Ask later (Optional)
+      description: 'Default: Postpone reminder'
+      default: Postpone reminder
+    logbook_message_skip:
+      name: Logbook message for action Skip (Optional)
+      description: 'Default: Reminder skipped'
+      default: Reminder skipped
+    logbook_message_no_answer:
+      name: Logbook message for no action after timeout (Optional)
+      description: 'Default: No answer time out'
+      default: No answer time out
+    optional_action:
+      name: Optional action
+      description: Run an action like notify a speaker at the same time that the mobile
+        notification
+      selector:
+        action: {}
+      default: []
+  source_url: https://raw.githubusercontent.com/Aohzan/hass-blueprints/main/blueprints/medication_reminder.yaml
+trigger:
+- platform: numeric_state
+  entity_id: !input reminder_time
+  below: !input reminder_ahead
+mode: restart
+action:
+- service: input_boolean.turn_off
+  target:
+    entity_id: !input 'input_boolean'
+- alias: Remind until garbage is brought out.
+  repeat:
+    while:
+    - condition: state
+      entity_id: !input 'input_boolean'
+      state: 'off'
+    sequence:
+    - service: logbook.log
+      data:
+        name: !input 'notification_title'
+        message: !input 'logbook_message_remind'
+        entity_id: !input 'input_boolean'
+    - choose:
+      - conditions: '{{ true }}'
+        sequence: !input 'optional_action'
+    - device_id: !input 'notify_device'
+      domain: mobile_app
+      type: notify
+      title: !input 'notification_title'
+      message: !input 'notification_message'
+      data:
+        actions:
+        - title: !input 'notification_action_brought_out'
+          action: brought_out
+        - title: !input 'notification_action_later'
+          action: later
+        - title: !input 'notification_action_skip'
+          action: skip
+        tag: !input 'input_boolean'
+    - wait_for_trigger:
+        platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          tag: !input 'input_boolean'
+      timeout:
+        minutes: !input 'ask_later_wait_time'
+    - choose:
+      - conditions: '{{ wait.trigger.event.data.action == ''brought_out'' }}'
+        sequence:
+        - service: input_boolean.turn_off
+          target:
+            entity_id: !input 'reminder_time'
+        - service: input_boolean.turn_on
+          target:
+            entity_id: !input 'input_boolean'
+        - service: logbook.log
+          data:
+            name: !input 'notification_title'
+            message: !input 'logbook_message_brought_out'
+            entity_id: !input 'input_boolean'
+      - conditions: '{{ wait.trigger.event.data.action == ''later'' }}'
+        sequence:
+        - service: logbook.log
+          data:
+            name: !input 'notification_title'
+            message: !input 'logbook_message_later'
+            entity_id: !input 'input_boolean'
+        - delay:
+            minutes: !input 'ask_later_wait_time'
+      - conditions: '{{ wait.trigger.event.data.action == ''skip'' }}'
+        sequence:
+        - service: input_boolean.turn_on
+          target:
+            entity_id: !input 'input_boolean'
+        - service: logbook.log
+          data:
+            name: !input 'notification_title'
+            message: !input 'logbook_message_skip'
+            entity_id: !input 'input_boolean'
+      default:
+      - device_id: !input 'notify_device'
+        domain: mobile_app
+        type: notify
+        message: clear_notification
+        data:
+          tag: !input 'input_boolean'
+      - service: logbook.log
+        data:
+          name: !input 'notification_title'
+          message: !input 'logbook_message_no_answer'
+          entity_id: !input 'input_boolean'
