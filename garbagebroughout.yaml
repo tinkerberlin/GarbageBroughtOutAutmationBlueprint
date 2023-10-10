@@ -1,3 +1,5 @@
+# heavily borrowed from Aohzan's medication reminder blueprint. Thank you!
+
 blueprint:
   name: Garbage Out?
   description: Was a specific garbage brought out to the street already?
@@ -8,11 +10,11 @@ blueprint:
       description: Countdown entity until pickup for relevant garbage
       selector:
         entity:
-          domain: input_boolean
+          domain: input_number
     reminder_ahead:
       name: Remind Ahead
-      description: Days pre-pickup that notification should be sent; 1 = tomorrow
-      default: 1.0
+      description: Days pre-pickup that notification should be sent; 2 = tomorrow
+      default: 2.0
       selector:
         number:
           min: 0.0
@@ -56,13 +58,13 @@ blueprint:
       default: Skip
     ask_later_wait_time:
       name: Wait time before next reminder
-      description: Minutes before notify again after a Ask later action.
+      description: Hours before notify again after a Ask later action.
       default: 1.0
       selector:
         number:
           min: 1.0
-          max: 60.0
-          unit_of_measurement: minutes
+          max: 48.0
+          unit_of_measurement: hours
           step: 1.0
           mode: slider
     logbook_message_remind:
@@ -92,7 +94,7 @@ blueprint:
       selector:
         action: {}
       default: []
-  source_url: https://raw.githubusercontent.com/Aohzan/hass-blueprints/main/blueprints/medication_reminder.yaml
+  source_url: https://raw.githubusercontent.com/tinkerberlin/GarbageBroughtOutAutmationBlueprint/main/garbagebroughout.yaml
 trigger:
 - platform: numeric_state
   entity_id: !input reminder_time
@@ -141,9 +143,6 @@ action:
     - choose:
       - conditions: '{{ wait.trigger.event.data.action == ''brought_out'' }}'
         sequence:
-        - service: input_boolean.turn_off
-          target:
-            entity_id: !input 'reminder_time'
         - service: input_boolean.turn_on
           target:
             entity_id: !input 'input_boolean'
