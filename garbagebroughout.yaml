@@ -10,7 +10,6 @@ blueprint:
       description: Countdown entity until pickup for relevant garbage
       selector:
         entity:
-          domain: input_number
     reminder_ahead:
       name: Remind Ahead
       description: Days pre-pickup that notification should be sent; 2 = tomorrow
