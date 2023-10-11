@@ -1,58 +1,58 @@
-# heavily borrowed from Aohzan's medication reminder blueprint. Thank you!
+# Heavily borrowed from Aohzan's medication reminder blueprint. Thank you!
 
 blueprint:
   name: Garbage Out?
-  description: Was a specific garbage brought out to the street already?
+  description: Was a specific garbage brought out to the street already? <h4>!! You have to create one automation per garbage type (e.g. plastic, paper, organic, waste, etc.) Remember that your helper-input_boolean should be easily identifiable to the specific waste type this automation is used for !!</h4> This automation triggers, when your entity that shows you how many days are left until the garbage is picked-up hits the number defined below. If the entity switches over at midnight, that's when the automation will trigger. Please keep this in mind and potentially offset the time that entity switches accordingly. 
   domain: automation
   input:
     reminder_time:
-      name: Pickup countdown
-      description: Countdown entity until pickup for relevant garbage
+      name: Pickup Countdown Entity
+      description: Countdown entity until pickup for relevant garbage type
       selector:
         entity:
     reminder_ahead:
-      name: Remind Ahead
-      description: Days pre-pickup that notification should be sent; 2 = tomorrow
-      default: 2.0
+      name: When Do You Want To Be Reminded?
+      description: Days pre-pickup that notification should be sent; 0 = remind me on the day of pickup
+      default: 1.0
       selector:
         number:
           min: 0.0
-          max: 14.0
+          max: 31.0
           unit_of_measurement: days
           step: 1.0
           mode: slider
     notify_device:
-      name: Notification
+      name: Device To Be Notified On
       description: Device needs to run the official Home Assistant app to receive
-        notifications
+        notifications. You need to create one automation per device that should be notified.
       selector:
         device:
           integration: mobile_app
     input_boolean:
       name: Dedicated input_boolean
-      description: Create and set here a input_boolean to handle history and state
+      description: Create and set here a input_boolean-helper to handle history and state
         of the automation
       selector:
         entity:
           domain: input_boolean
     notification_title:
-      name: 'Notification title (Optional)'
+      name: 'Notification Title (Optional)'
       description: 'Default: Bring out the garbage!'
       default: Bring out the garbage!
     notification_message:
-      name: 'Notification message (Optional)'
+      name: 'Notification Message (Optional)'
       description: 'Default: It is time to bring out the garbage.'
       default: It is time to bring out the garbage.
     notification_action_brought_out:
-      name: 'Notification action: Done (Optional)'
+      name: 'Notification Action: Done (Optional)'
       description: 'Default: Done'
       default: Done
     notification_action_later:
-      name: 'Notification action: Ask later (Optional)'
+      name: 'Notification Action: Ask later (Optional)'
       description: 'Default: Ask later'
       default: Ask later
     notification_action_skip:
-      name: 'Notification action: Skip (Optional)'
+      name: 'Notification Action: Skip (Optional)'
       description: 'Default: Skip'
       default: Skip
     ask_later_wait_time:
@@ -87,7 +87,7 @@ blueprint:
       description: 'Default: No answer time out'
       default: No answer time out
     optional_action:
-      name: Optional action
+      name: Optional Action
       description: Run an action like notify a speaker at the same time that the mobile
         notification
       selector:
@@ -95,9 +95,10 @@ blueprint:
       default: []
   source_url: https://raw.githubusercontent.com/tinkerberlin/GarbageBroughtOutAutmationBlueprint/main/garbagebroughout.yaml
 trigger:
-- platform: numeric_state
-  entity_id: !input reminder_time
-  below: !input reminder_ahead
+- platform: state
+  entity_id: 
+    - !input reminder_time
+  to: !input reminder_ahead
 mode: restart
 action:
 - service: input_boolean.turn_off
